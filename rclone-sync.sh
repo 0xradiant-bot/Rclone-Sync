@@ -98,33 +98,6 @@ EOF
 
 echo "Created filter.txt with backup rules in $FOLDER_PATH"
 
-# Ask if the user wants to create a mount point and alias for mounting the drive
-read -p "Do you want to create an alias and mount point for Rclone drive? (y/n): " CREATE_ALIAS
-if [[ "$CREATE_ALIAS" == "y" || "$CREATE_ALIAS" == "Y" ]]; then
-    # Create the mount point
-    MOUNT_POINT="$HOME/OneDrive"
-    mkdir -p "$MOUNT_POINT"
-    echo "Created mount point at $MOUNT_POINT"
-
-    # Create the alias in bash and zsh
-    BASHRC="$HOME/.bashrc"
-    ZSHRC="$HOME/.zshrc"
-    
-    ALIAS_COMMAND="alias mountonedrive='rclone --vfs-cache-mode writes mount \"$RCLONE_DRIVE\": \"$MOUNT_POINT\" &'"
-    
-    # Add alias to .bashrc if not already present
-    if ! grep -q "alias mountonedrive" "$BASHRC"; then
-        echo "$ALIAS_COMMAND" >> "$BASHRC"
-        echo "Alias added to $BASHRC"
-    fi
-    
-    # Add alias to .zshrc if not already present
-    if ! grep -q "alias mountonedrive" "$ZSHRC"; then
-        echo "$ALIAS_COMMAND" >> "$ZSHRC"
-        echo "Alias added to $ZSHRC"
-    fi
-fi
-
 # Create a systemd service for backup (rcloneback.service)
 SERVICE_PATH="/etc/systemd/system/rcloneback.service"
 cat <<EOF | sudo tee "$SERVICE_PATH" >/dev/null
