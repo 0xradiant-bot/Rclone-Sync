@@ -11,6 +11,24 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
+# Check if Rclone is installed, if not prompt the user to install it
+if ! command_exists rclone; then
+    echo "Rclone is not installed. Please install Rclone first to proceed."
+    if command_exists pacman; then
+        echo "Installing Rclone on Arch-based system..."
+        sudo pacman -S rclone
+    elif command_exists apt; then
+        echo "Installing Rclone on Debian-based system..."
+        sudo apt update && sudo apt install rclone
+    else
+        echo "Please manually install Rclone as your package manager is not recognized."
+        exit 1
+    fi
+fi
+
+# Ask for the Rclone remote drive name
+read -p "Enter the name of your Rclone drive (e.g., OneDriveAdmin): " RCLONE_DRIVE
+
 # Ask for folder location
 read -p "Enter the folder name where backup files should be created (default: ~/Backup): " FOLDER_NAME
 FOLDER_NAME=${FOLDER_NAME:-"$HOME/Backup"}
@@ -42,7 +60,7 @@ if [ -n "\$WEBHOOK_URL" ]; then
 fi
 
 # Run the rclone backup and capture output
-OUTPUT=\$(rclone sync /OneDriveAdmin:Hyprland-bak --filter-from "$FOLDER_PATH/filter.txt" --skip-links 2>&1)
+OUTPUT=\$(rclone sync /"$RCLONE_DRIVE":Hyprland-bak --filter-from "$FOLDER_PATH/filter.txt" --skip-links 2>&1)
 
 # Count successes and failures directly from the output
 SUCCESS_COUNT=\$(echo "\$OUTPUT" | grep -c "Copied")
@@ -79,6 +97,33 @@ cat <<EOF > "$FOLDER_PATH/filter.txt"
 EOF
 
 echo "Created filter.txt with backup rules in $FOLDER_PATH"
+
+# Ask if the user wants to create a mount point and alias for mounting the drive
+read -p "Do you want to create an alias and mount point for Rclone drive? (y/n): " CREATE_ALIAS
+if [[ "$CREATE_ALIAS" == "y" || "$CREATE_ALIAS" == "Y" ]]; then
+    # Create the mount point
+    MOUNT_POINT="$HOME/OneDrive"
+    mkdir -p "$MOUNT_POINT"
+    echo "Created mount point at $MOUNT_POINT"
+
+    # Create the alias in bash and zsh
+    BASHRC="$HOME/.bashrc"
+    ZSHRC="$HOME/.zshrc"
+    
+    ALIAS_COMMAND="alias mountonedrive='rclone --vfs-cache-mode writes mount \"$RCLONE_DRIVE\": \"$MOUNT_POINT\" &'"
+    
+    # Add alias to .bashrc if not already present
+    if ! grep -q "alias mountonedrive" "$BASHRC"; then
+        echo "$ALIAS_COMMAND" >> "$BASHRC"
+        echo "Alias added to $BASHRC"
+    fi
+    
+    # Add alias to .zshrc if not already present
+    if ! grep -q "alias mountonedrive" "$ZSHRC"; then
+        echo "$ALIAS_COMMAND" >> "$ZSHRC"
+        echo "Alias added to $ZSHRC"
+    fi
+fi
 
 # Create a systemd service for backup (rcloneback.service)
 SERVICE_PATH="/etc/systemd/system/rcloneback.service"
