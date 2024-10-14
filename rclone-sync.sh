@@ -52,30 +52,31 @@ cat <<EOF > "$DISCORD_LOG_SCRIPT"
 #!/bin/bash
 
 # Optional Discord integration
-WEBHOOK_URL="$DISCORD_WEBHOOK_URL"
+WEBHOOK_URL="https://discord.com/api/webhooks/1294962401862615102/YzRGupT98fyzZoSNhmfc-Wygg4LbqSaE3h9-2aEL_lPfMC_zboeeR126mSccxF0ixx_h"
 
-if [ -n "\$WEBHOOK_URL" ]; then
-    START_MESSAGE="Backup script started at \$(date +\"%Y-%m-%d %H:%M:%S\")."
-    curl -H "Content-Type: application/json" -X POST -d "{\"content\": \"\$START_MESSAGE\"}" "\$WEBHOOK_URL"
+if [ -n "$WEBHOOK_URL" ]; then
+    START_MESSAGE="Backup script started at $(date +"%Y-%m-%d %H:%M:%S")."
+    curl -H "Content-Type: application/json" -X POST -d "{\"content\": \"$START_MESSAGE\"}" "$WEBHOOK_URL"
 fi
 
 # Run the rclone backup and capture output
-OUTPUT=\$(rclone sync /"$RCLONE_DRIVE":Hyprland-bak --filter-from "$FOLDER_PATH/filter.txt" --skip-links 2>&1)
+OUTPUT=$(rclone sync /"$RCLONE_DRIVE":Hyprland-bak --filter-from "$FOLDER_PATH/filter.txt" --skip-links 2>&1)
 
 # Count successes and failures directly from the output
-SUCCESS_COUNT=\$(echo "\$OUTPUT" | grep -c "Copied")
-FAILURE_COUNT=\$(echo "\$OUTPUT" | grep -c "Failed")
+SUCCESS_COUNT=$(echo "$OUTPUT" | grep -c "Copied")
+FAILURE_COUNT=$(echo "$OUTPUT" | grep -c "Failed")
 
 # Create timestamp
-TIMESTAMP=\$(date +\"%Y-%m-%d %H:%M:%S\")
+TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
 
 # Create summary message
-SUMMARY_MESSAGE="Backup completed at \$TIMESTAMP.\nSuccess: \$SUCCESS_COUNT\nFailures: \$FAILURE_COUNT"
+SUMMARY_MESSAGE="Backup completed at $TIMESTAMP.\nSuccess: $SUCCESS_COUNT\nFailures: $FAILURE_COUNT"
 
 # Send the summary message to Discord (if enabled)
-if [ -n "\$WEBHOOK_URL" ]; then
-    curl -H "Content-Type: application/json" -X POST -d "{\"content\": \"\$SUMMARY_MESSAGE\"}" "\$WEBHOOK_URL"
+if [ -n "$WEBHOOK_URL" ]; then
+    curl -H "Content-Type: application/json" -X POST -d "{\"content\": \"$SUMMARY_MESSAGE\"}" "$WEBHOOK_URL"
 fi
+
 EOF
 
 # Make the discordlog.sh script executable
