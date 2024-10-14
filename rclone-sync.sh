@@ -38,50 +38,23 @@ FOLDER_PATH=$(realpath "$FOLDER_NAME")
 mkdir -p "$FOLDER_PATH"
 echo "Created folder at $FOLDER_PATH"
 
-# Ask if Discord integration is required
-read -p "Do you want to integrate Discord notifications? (y/n): " DISCORD_INTEGRATION
-if [[ "$DISCORD_INTEGRATION" == "y" || "$DISCORD_INTEGRATION" == "Y" ]]; then
-    read -p "Enter your Discord Webhook URL: " DISCORD_WEBHOOK_URL
-else
-    DISCORD_WEBHOOK_URL=""
-fi
-
-# Create the discordlog.sh script
-DISCORD_LOG_SCRIPT="$FOLDER_PATH/discordlog.sh"
-cat <<EOF > "$DISCORD_LOG_SCRIPT"
+# Create the rclone backup script
+RCLONE_SCRIPT="$FOLDER_PATH/rclone_backup.sh"
+cat <<EOF > "$RCLONE_SCRIPT"
 #!/bin/bash
 
-# Optional Discord integration
-WEBHOOK_URL="https://discord.com/api/webhooks/1294962401862615102/YzRGupT98fyzZoSNhmfc-Wygg4LbqSaE3h9-2aEL_lPfMC_zboeeR126mSccxF0ixx_h"
-
-if [ -n "$WEBHOOK_URL" ]; then
-    START_MESSAGE="Backup script started at $(date +"%Y-%m-%d %H:%M:%S")."
-    curl -H "Content-Type: application/json" -X POST -d "{\"content\": \"$START_MESSAGE\"}" "$WEBHOOK_URL"
-fi
-
 # Run the rclone backup and capture output
-OUTPUT=$(rclone sync /"$RCLONE_DRIVE":Hyprland-bak --filter-from "$FOLDER_PATH/filter.txt" --skip-links 2>&1)
+OUTPUT=\$(rclone sync /"$RCLONE_DRIVE":Hyprland-bak --filter-from "$FOLDER_PATH/filter.txt" --skip-links 2>&1)
 
-# Count successes and failures directly from the output
-SUCCESS_COUNT=$(echo "$OUTPUT" | grep -c "Copied")
-FAILURE_COUNT=$(echo "$OUTPUT" | grep -c "Failed")
 
-# Create timestamp
-TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
 
-# Create summary message
-SUMMARY_MESSAGE="Backup completed at $TIMESTAMP.\nSuccess: $SUCCESS_COUNT\nFailures: $FAILURE_COUNT"
-
-# Send the summary message to Discord (if enabled)
-if [ -n "$WEBHOOK_URL" ]; then
-    curl -H "Content-Type: application/json" -X POST -d "{\"content\": \"$SUMMARY_MESSAGE\"}" "$WEBHOOK_URL"
-fi
-
+# Print summary to console (or you could log it to a file)
+echo -e "\$SUMMARY_MESSAGE"
 EOF
 
-# Make the discordlog.sh script executable
-chmod +x "$DISCORD_LOG_SCRIPT"
-echo "Created and made discordlog.sh executable in $FOLDER_PATH"
+# Make the rclone backup script executable
+chmod +x "$RCLONE_SCRIPT"
+echo "Created and made rclone_backup.sh executable in $FOLDER_PATH"
 
 # Add the content of filter.txt directly to the script
 cat <<EOF > "$FOLDER_PATH/filter.txt"
@@ -106,7 +79,7 @@ cat <<EOF | sudo tee "$SERVICE_PATH" >/dev/null
 Description=Run Rclone Backup Script at Startup
 
 [Service]
-ExecStart=$DISCORD_LOG_SCRIPT
+ExecStart=$RCLONE_SCRIPT
 User=$(whoami)
 WorkingDirectory=$FOLDER_PATH
 Environment=DISPLAY=:0
