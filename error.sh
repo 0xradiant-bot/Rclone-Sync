@@ -20,13 +20,13 @@ echo -e "${Green}By: @0xRad1ant${No}"
 if ! grep -q "blackarch" /etc/pacman.conf; then
     echo "[blackarch]" >> /etc/pacman.conf
     echo "Server = https://blackarch.org/blackarch/\$repo/os/\$arch" >> /etc/pacman.conf
-    echo "Repository added successfully."
+    echo "BlackArch repository added successfully."
 else
     echo "BlackArch repository is already added."
 fi
 
 # Update package database
-pacman -Syu --noconfirm
+sudo pacman -Syu --noconfirm
 
 # Install Yay if not installed
 if ! command -v yay &> /dev/null; then
@@ -43,12 +43,20 @@ fi
 # Function to install packages if not already installed
 install_package() {
     package=$1
+    conflict_pkg=$2
     if ! pacman -Qq | grep -qw "$package"; then
         if yay -Qq | grep -qw "$package"; then
             echo "$package is available in AUR, installing..."
             yay -S --noconfirm "$package"
         else
             echo "$package is not installed, installing..."
+            if [ -n "$conflict_pkg" ]; then
+                # Check for conflicting package
+                if pacman -Qq | grep -qw "$conflict_pkg"; then
+                    echo "$conflict_pkg is installed, removing it first..."
+                    sudo pacman -Rns --noconfirm "$conflict_pkg"
+                fi
+            fi
             sudo pacman -S --needed --noconfirm "$package"
         fi
     else
@@ -71,7 +79,7 @@ install_package "wireshark"
 install_package "wifite"
 
 # File System Utilities
-install_package "ntfs-3g"
+install_package "ntfs-3g" "exfatprogs"
 install_package "exfat-utils"
 
 # Terminal & Shell
